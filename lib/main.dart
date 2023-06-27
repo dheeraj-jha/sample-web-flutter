@@ -10,17 +10,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:al_downloader/al_downloader.dart';
 import 'package:flutter/material.dart';
-import 'package:gallery_saver/gallery_saver.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 // #docregion platform_imports
 // Import for Android features.
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 // Import for iOS features.
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+
+import 'gallery_saver/gallery_saver.dart';
 // #enddocregion platform_imports
 
 void main() {
@@ -30,11 +28,6 @@ void main() {
           debugShowCheckedModeBanner: false,
       )
   );
-}
-
-void initializeAlDownloader() {
-  ALDownloader.initialize();
-  ALDownloader.configurePrint(enabled: false, frequentEnabled: false);
 }
 
 const String kNavigationExamplePage = '''
@@ -117,8 +110,6 @@ class _WebViewExampleState extends State<WebViewExample> {
   void initState() {
     super.initState();
 
-    initializeAlDownloader();
-
     // #docregion platform_features
     late final PlatformWebViewControllerCreationParams params;
     if (WebViewPlatform.instance is WebKitWebViewPlatform) {
@@ -147,7 +138,7 @@ class _WebViewExampleState extends State<WebViewExample> {
           },
           onPageFinished: (String url) {
             debugPrint('Page finished loading: $url');
-            Future.delayed(const Duration(milliseconds: 1000), () async {
+            Future.delayed(Duration.zero, () async {
               controller.runJavaScript(await loadAsset());
               controller.runJavaScript(noLoginScript);
             });
@@ -187,6 +178,13 @@ Page resource error:
       )
       ..loadRequest(Uri.parse('https://www.instagram.com'));
 
+    Future.delayed(Duration.zero, () async {
+      if(Platform.isAndroid) {
+        controller.runJavaScript(await loadAsset());
+        controller.runJavaScript(noLoginScript);
+      }
+    });
+
     // #docregion platform_features
     if (controller.platform is AndroidWebViewController) {
       AndroidWebViewController.enableDebugging(true);
@@ -221,12 +219,6 @@ Page resource error:
   Widget favoriteButton() {
     return FloatingActionButton(
       onPressed: () async {
-        if (await Permission.storage.request().isGranted) {
-          debugPrint("granted ++++++");
-        } else {
-          debugPrint("no grant -----");
-        }
-
         final String? url = await _controller.currentUrl();
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -499,7 +491,7 @@ class SampleMenu extends StatelessWidget {
   }
 
   static Future<String> _prepareLocalFile() async {
-    final String tmpDir = (await getTemporaryDirectory()).path;
+    final String tmpDir = '(await getTemporaryDirectory()).path';
     final File indexFile = File(
         <String>{tmpDir, 'www', 'index.html'}.join(Platform.pathSeparator));
 
@@ -531,12 +523,8 @@ class _NavigationControlsState extends State<NavigationControls> {
   @override
   void initState() {
     super.initState();
-    GallerySaver.saveImage(
-      'https://blog.snappa.com/wp-content/uploads/2020/08/cropped-profile-icon-image_1200x1200-2-32x32.png',
-    );
-
-    GallerySaver.saveVideo(
-        'https://file-examples.com/storage/fe396452246495b989f22f7/2017/04/file_example_MP4_480_1_5MG.mp4'
+    GallerySaver.save(
+      "https://file-examples.com/storage/fe396452246495b989f22f7/2017/04/file_example_MP4_480_1_5MG.mp4",
     );
     webViewController
         .addJavaScriptChannel(
@@ -545,61 +533,11 @@ class _NavigationControlsState extends State<NavigationControls> {
           var finalMessage = message.message.split(',');
           var url = finalMessage[1];
           var fileName = finalMessage[0];
-          var directory = await getTemporaryDirectory();
-          ALDownloader.addForeverDownloaderHandlerInterface(
-              ALDownloaderHandlerInterface(progressHandler: (progress) {
-                debugPrint('ALDownloader | download progress = $progress, url = $url\n');
-                if (mounted) {
-                  setState(() {
-                    progressBarValue = progress;
-                  });
-                }
-              }, succeededHandler: () {
-                final lastFileName = map.remove(url) ?? '';
-                debugPrint('ALDownloader | download succeeded, url = $url\n');
-                debugPrint('lastFileName = $lastFileName');
 
-                if (lastFileName.endsWith('jpeg') || lastFileName.endsWith('jpg')) { // TODO: add exhaustive checks for different types
-                  GallerySaver.saveImage(
-                    lastFileName,
-                  );
-                } else if(lastFileName.endsWith('mp4')) {
-                  GallerySaver.saveVideo(
-                    lastFileName,
-                  );
-                } else {
-                  debugPrint('welcome break');
-                }
-                if (mounted) {
-                  setState(() {
-                    progressBarValue = 1.0;
-                    Future.delayed(Duration(seconds: 1), () {
-                      if (mounted) {
-                        setState(() {
-                          progressBarValue = 0.0;
-                        });
-                      }
-                    });
-                  });
-                }
-              }, failedHandler: () {
-                debugPrint('ALDownloader | download failed, url = $url\n');
-                if (mounted) {
-                  setState(() {
-                    progressBarValue = 0.0;
-                  });
-                }
-              }, pausedHandler: () {
-                debugPrint('ALDownloader | download paused, url = $url\n');
-              }), url);
-          final directoryPath = directory?.path ?? '';
-          ALDownloader.download(url,
-            directoryPath: directoryPath,
-            fileName: fileName,);
-            final queueFile = '$directoryPath/$fileName';
-            map.addAll({url: queueFile});
-        }
-    );
+          GallerySaver.save(
+            url,
+          );
+        });
   }
 
   @override

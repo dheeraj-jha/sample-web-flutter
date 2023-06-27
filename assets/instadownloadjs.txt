@@ -184,8 +184,8 @@ if (typeof(audioInstaPandaStateSoundOn) === "undefined") {
     function addCustomBtn(node, iconColor, appendNode) {
         // add download button and set event handlers
         // add newtab button
-        let newtabBtn = createCustomBtn(svgNewtabBtn, iconColor, 'newtab-btn', '16px');
-        appendNode(node, newtabBtn);
+        //let newtabBtn = createCustomBtn(svgNewtabBtn, iconColor, 'newtab-btn', '16px');
+        //appendNode(node, newtabBtn);
 
         // add download button
         let downloadBtn = createCustomBtn(svgDownloadBtn, iconColor, 'download-btn', '14px');
